@@ -1,5 +1,6 @@
-from flask import Flask, request, render_template, jsonify
+from flask import Flask, request, jsonify, render_template
 import requests
+from requests.auth import HTTPBasicAuth
 
 app = Flask(__name__)
 
@@ -10,18 +11,31 @@ def index():
 @app.route('/trigger-job', methods=['POST'])
 def trigger_job():
     data = request.json
-    jenkins_url = f"{data.get('jenkins_url')}/job/{data.get('job_name')}/buildWithParameters"
-    auth = (data.get('username'), data.get('token'))
-    params = {'replicas': data.get('replicas')}
-    
+    jenkins_url = data.get('jenkinsUrl')
+    job_name = data.get('jobName')
+    username = data.get('username')
+    token = data.get('token')
+
+    # Dinamik parametreleri al
+    parameters = data.get('parameters', {})
+
+    # Jenkins job URL'i oluştur
+    job_url = f"{jenkins_url}/job/{job_name}/buildWithParameters"
+
+    # Jenkins job'u çalıştırmak için POST isteği gönder
     try:
-        response = requests.post(jenkins_url, auth=auth, params=params)
-        response.raise_for_status()  # Hata varsa raise yapar
-        return jsonify({'message': 'Jenkins job triggered successfully'}), response.status_code
-    except requests.exceptions.RequestException as e:
-        print(f"Error triggering Jenkins job: {e}")
-        return jsonify({'message': 'Failed to trigger Jenkins job', 'error': str(e)}), 500
+        response = requests.post(
+            job_url,
+            auth=HTTPBasicAuth(username, token),
+            params=parameters
+        )
+
+        if response.status_code == 201:
+            return "Job triggered successfully!", 200
+        else:
+            return f"Failed to trigger job: {response.status_code} - {response.text}", 400
+    except Exception as e:
+        return f"An error occurred: {str(e)}", 500
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=3000)
-
