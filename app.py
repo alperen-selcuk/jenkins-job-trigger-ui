@@ -1,41 +1,83 @@
-from flask import Flask, request, jsonify, render_template
-import requests
-from requests.auth import HTTPBasicAuth
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Jenkins Job Trigger</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/css/bootstrap.min.css">
+    <style>
+        body {
+            background-color: #f8f9fa;
+            padding: 20px;
+        }
+        .button {
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1 class="text-center">Trigger Jenkins Job</h1>
+        <form id="jobForm">
+            <div class="mb-3">
+                <label for="jenkinsUrl" class="form-label">Jenkins URL</label>
+                <input type="text" class="form-control" id="jenkinsUrl" placeholder="Enter Jenkins URL" required>
+            </div>
+            <div class="mb-3">
+                <label for="jobName" class="form-label">Job Name</label>
+                <input type="text" class="form-control" id="jobName" placeholder="Enter Job Name" required>
+            </div>
+            <div class="mb-3">
+                <label for="username" class="form-label">Username</label>
+                <input type="text" class="form-control" id="username" placeholder="Enter Username" required>
+            </div>
+            <div class="mb-3">
+                <label for="token" class="form-label">Token</label>
+                <input type="text" class="form-control" id="token" placeholder="Enter Token" required>
+            </div>
+            <div class="mb-3">
+                <label for="parameterName" class="form-label">Parameter Name</label>
+                <input type="text" class="form-control" id="parameterName" placeholder="Enter Parameter Name" required>
+            </div>
+            <div class="mb-3">
+                <label for="parameterValue" class="form-label">Parameter Value</label>
+                <input type="text" class="form-control" id="parameterValue" placeholder="Enter Parameter Value" required>
+            </div>
+            <button type="submit" class="btn btn-primary button">Trigger Job</button>
+        </form>
+        <div id="result" class="mt-3"></div>
+    </div>
 
-app = Flask(__name__)
+    <script>
+        document.getElementById('jobForm').addEventListener('submit', async function(event) {
+            event.preventDefault();
 
-@app.route('/')
-def index():
-    return render_template('index.html')
+            const jenkinsUrl = document.getElementById('jenkinsUrl').value;
+            const jobName = document.getElementById('jobName').value;
+            const username = document.getElementById('username').value;
+            const token = document.getElementById('token').value;
+            const parameterName = document.getElementById('parameterName').value;
+            const parameterValue = document.getElementById('parameterValue').value;
 
-@app.route('/trigger-job', methods=['POST'])
-def trigger_job():
-    data = request.json
-    jenkins_url = data.get('jenkinsUrl')
-    job_name = data.get('jobName')
-    username = data.get('username')
-    token = data.get('token')
+            const response = await fetch('/trigger-job', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    jenkinsUrl,
+                    jobName,
+                    username,
+                    token,
+                    parameters: {
+                        [parameterName]: parameterValue
+                    }
+                })
+            });
 
-    # Dinamik parametreleri al
-    parameters = data.get('parameters', {})
-
-    # Jenkins job URL'i oluştur
-    job_url = f"{jenkins_url}/job/{job_name}/buildWithParameters"
-
-    # Jenkins job'u çalıştırmak için POST isteği gönder
-    try:
-        response = requests.post(
-            job_url,
-            auth=HTTPBasicAuth(username, token),
-            params=parameters
-        )
-
-        if response.status_code == 201:
-            return "Job triggered successfully!", 200
-        else:
-            return f"Failed to trigger job: {response.status_code} - {response.text}", 400
-    except Exception as e:
-        return f"An error occurred: {str(e)}", 500
-
-if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=3000)
+            const result = await response.text();
+            document.getElementById('result').innerText = result;
+        });
+    </script>
+</body>
+</html>
